@@ -1,51 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 const MAX_CUPOS = 8;
 const PRICE = 550;
 const ADMIN_PASSWORD = 'pole2026';
 
-const SUPABASE_URL = 'https://hhpgvuiucdfknxnfddme.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocGd2dWl1Y2Rma254bmZkZG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1ODk0ODgsImV4cCI6MjA5OTE2NTQ4OH0.B4Ps_-R1oTaQGbdBXS6_a8OLycdSkz8ij34of8Ao7Vk';
-const HEADERS = {
-  'apikey': SUPABASE_KEY,
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json',
-};
+const supabase = createClient(
+  'https://hhpgvuiucdfknxnfddme.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocGd2dWl1Y2Rma254bmZkZG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1ODk0ODgsImV4cCI6MjA5OTE2NTQ4OH0.B4Ps_-R1oTaQGbdBXS6_a8OLycdSkz8ij34of8Ao7Vk'
+);
 
 async function fetchReservas() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?select=*&order=created_at.asc`, {
-    headers: HEADERS,
-  });
-  if (!res.ok) throw new Error('Error al cargar reservas');
-  return res.json();
+  const { data, error } = await supabase.from('reservas').select('*').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
 }
 
 async function insertReserva(nombre) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
-    method: 'POST',
-    headers: { ...HEADERS, Prefer: 'return=representation' },
-    body: JSON.stringify({ nombre, pagado: false }),
-  });
-  if (!res.ok) throw new Error('Error al guardar reserva');
-  const data = await res.json();
-  return data[0];
+  const { data, error } = await supabase.from('reservas').insert([{ nombre, pagado: false }]).select().single();
+  if (error) throw error;
+  return data;
 }
 
 async function updatePagado(id, pagado) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: HEADERS,
-    body: JSON.stringify({ pagado }),
-  });
-  if (!res.ok) throw new Error('Error al actualizar');
+  const { error } = await supabase.from('reservas').update({ pagado }).eq('id', id);
+  if (error) throw error;
 }
 
 async function deleteReserva(id) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${id}`, {
-    method: 'DELETE',
-    headers: HEADERS,
-  });
-  if (!res.ok) throw new Error('Error al eliminar');
+  const { error } = await supabase.from('reservas').delete().eq('id', id);
+  if (error) throw error;
 }
 const MOBILEPAY_NUMBER = '+45 55 26 57 35';
 const REVOLUT_LINK = 'https://revolut.me/rohhowe';
