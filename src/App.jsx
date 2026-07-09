@@ -6,10 +6,15 @@ const ADMIN_PASSWORD = 'pole2026';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+};
 
 async function fetchReservas() {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?select=*&order=created_at.asc`, {
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    headers: HEADERS,
   });
   if (!res.ok) throw new Error('Error al cargar reservas');
   return res.json();
@@ -18,7 +23,7 @@ async function fetchReservas() {
 async function insertReserva(nombre) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
     method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    headers: { ...HEADERS, Prefer: 'return=representation' },
     body: JSON.stringify({ nombre, pagado: false }),
   });
   if (!res.ok) throw new Error('Error al guardar reserva');
@@ -29,7 +34,7 @@ async function insertReserva(nombre) {
 async function updatePagado(id, pagado) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${id}`, {
     method: 'PATCH',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    headers: HEADERS,
     body: JSON.stringify({ pagado }),
   });
   if (!res.ok) throw new Error('Error al actualizar');
@@ -38,7 +43,7 @@ async function updatePagado(id, pagado) {
 async function deleteReserva(id) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${id}`, {
     method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    headers: HEADERS,
   });
   if (!res.ok) throw new Error('Error al eliminar');
 }
@@ -185,7 +190,7 @@ export default function PoleBooking() {
   const cuposLibres = MAX_CUPOS - count;
 
   return (
-    <div style={{ padding: '1rem 0', maxWidth: 560, margin: '0 auto' }}>
+    <div style={{ padding: '1rem 0', maxWidth: 560, margin: '0 auto', fontFamily: "'Albert Sans', sans-serif" }}>
       <div
         style={{
           display: 'flex',
