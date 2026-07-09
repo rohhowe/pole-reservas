@@ -1,35 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
 const MAX_CUPOS = 8;
 const PRICE = 550;
 const ADMIN_PASSWORD = 'pole2026';
 
-const supabase = createClient(
-  'https://hhpgvuiucdfknxnfddme.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocGd2dWl1Y2Rma254bmZkZG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1ODk0ODgsImV4cCI6MjA5OTE2NTQ4OH0.B4Ps_-R1oTaQGbdBXS6_a8OLycdSkz8ij34of8Ao7Vk'
-);
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxlsLm3rEqbJAKtvt2KFVqgcUXFo69SUqF5FcLsP4xVgB9LgWej5ZWV2AYxyNnDY872A/exec';
 
 async function fetchReservas() {
-  const { data, error } = await supabase.from('reservas').select('*').order('created_at', { ascending: true });
-  if (error) throw error;
-  return data;
+  const res = await fetch(SCRIPT_URL);
+  if (!res.ok) throw new Error('Error al cargar reservas');
+  const data = await res.json();
+  return data.map((r, i) => ({ id: i + 1, name: r.nombre, paid: false }));
 }
 
 async function insertReserva(nombre) {
-  const { data, error } = await supabase.from('reservas').insert([{ nombre, pagado: false }]).select().single();
-  if (error) throw error;
-  return data;
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ nombre }),
+  });
+  if (!res.ok) throw new Error('Error al guardar');
+  return { nombre };
 }
 
 async function updatePagado(id, pagado) {
-  const { error } = await supabase.from('reservas').update({ pagado }).eq('id', id);
-  if (error) throw error;
+  // El estado de pago se maneja localmente, en Sheets solo guardamos el nombre
 }
 
 async function deleteReserva(id) {
-  const { error } = await supabase.from('reservas').delete().eq('id', id);
-  if (error) throw error;
+  // La eliminación se hace directamente en Google Sheets
 }
 const MOBILEPAY_NUMBER = '+45 55 26 57 35';
 const REVOLUT_LINK = 'https://revolut.me/rohhowe';
@@ -67,7 +65,7 @@ export default function PoleBooking() {
   const loadStudents = useCallback(async () => {
     try {
       const data = await fetchReservas();
-      setStudents(data.map(r => ({ id: r.id, name: r.nombre, paid: r.pagado })));
+      setStudents(data);
     } catch (e) {
       setStudents([]);
     } finally {
@@ -86,14 +84,13 @@ export default function PoleBooking() {
     setSaving(true);
     try {
       const latest = await fetchReservas();
-      const latestMapped = latest.map(r => ({ id: r.id, name: r.nombre, paid: r.pagado }));
-      setStudents(latestMapped);
-      if (latestMapped.length >= MAX_CUPOS) { setError('No quedan cupos disponibles.'); return; }
-      if (latestMapped.some(s => s.name.toLowerCase() === trimmed.toLowerCase())) { setError('Ese nombre ya está anotado.'); return; }
-      const newRecord = await insertReserva(trimmed);
-      const newStudent = { id: newRecord.id, name: newRecord.nombre, paid: newRecord.pagado };
+      setStudents(latest);
+      if (latest.length >= MAX_CUPOS) { setError('No quedan cupos disponibles.'); return; }
+      if (latest.some(s => s.name.toLowerCase() === trimmed.toLowerCase())) { setError('Ese nombre ya está anotado.'); return; }
+      await insertReserva(trimmed);
+      const newStudent = { id: Date.now(), name: trimmed, paid: false };
       setStudents(prev => [...prev, newStudent]);
-      setPendingId(newRecord.id);
+      setPendingId(newStudent.id);
       setStep('payment');
     } catch (e) {
       setError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
@@ -103,32 +100,16 @@ export default function PoleBooking() {
   };
 
   const confirmPaid = async () => {
-    setSaving(true);
-    try {
-      await updatePagado(pendingId, true);
-      setStudents(prev => prev.map(s => s.id === pendingId ? { ...s, paid: true } : s));
-      setStep('done');
-    } catch (e) {
-      setError('No se pudo confirmar el pago.');
-    } finally {
-      setSaving(false);
-    }
+    setStudents(prev => prev.map(s => s.id === pendingId ? { ...s, paid: true } : s));
+    setStep('done');
   };
 
   const togglePaid = async (id) => {
-    const student = students.find(s => s.id === id);
-    if (!student) return;
-    const newPaid = !student.paid;
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, paid: newPaid } : s));
-    try { await updatePagado(id, newPaid); }
-    catch (e) { setStudents(prev => prev.map(s => s.id === id ? { ...s, paid: !newPaid } : s)); }
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, paid: !s.paid } : s));
   };
 
   const removeStudent = async (id) => {
-    const previous = students;
     setStudents(prev => prev.filter(s => s.id !== id));
-    try { await deleteReserva(id); }
-    catch (e) { setStudents(previous); }
   };
 
   const resetForm = () => {
