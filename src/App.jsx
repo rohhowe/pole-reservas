@@ -217,8 +217,8 @@ export default function PoleBooking() {
         {(() => {
           const classDays = new Set([3, 17, 24, 31]);
           const dayNames = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
-          // Agosto 2026: el día 1 cae en domingo (índice 6 en semana Lu-Do)
-          const startOffset = 6;
+          // Agosto 2026: el día 1 cae en sábado (índice 5 en semana Lu-Do)
+          const startOffset = 5;
           const totalDays = 31;
           const cells = [];
 
