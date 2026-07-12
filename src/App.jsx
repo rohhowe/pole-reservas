@@ -85,7 +85,6 @@ export default function PoleBooking() {
     try {
       const latest = await fetchReservas();
       setStudents(latest);
-      if (latest.length >= MAX_CUPOS) { setError('No quedan cupos disponibles.'); return; }
       if (latest.some(s => s.name.toLowerCase() === trimmed.toLowerCase())) { setError('Ese nombre ya está anotado.'); return; }
       await insertReserva(trimmed);
       const newStudent = { id: Date.now(), name: trimmed, paid: false };
@@ -149,7 +148,7 @@ export default function PoleBooking() {
 
   const count = students.length;
   const pct = Math.min(100, Math.round((count / MAX_CUPOS) * 100));
-  const full = count >= MAX_CUPOS;
+  const full = false;
   const recaudado = count * PRICE;
   const recaudadoPago = students.filter((s) => s.paid).length * PRICE;
   const cuposLibres = MAX_CUPOS - count;
